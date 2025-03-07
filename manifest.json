@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "FlashBit",
+  "version": "1.0",
+  "description": "chrome 版本的一步调用大模型",
+  "icons": {
+    "128": "static/icon.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_icon": "static/icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["static/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

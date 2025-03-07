@@ -1,0 +1,118 @@
+/* 确保弹出窗口填满整个 popup 窗口 */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+/* 聊天窗口填充整个屏幕 */
+#chat-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+/* 聊天记录区 */
+#chat-history {
+    flex-grow: 1;
+    padding: 10px;
+    overflow-y: auto;
+    max-height: calc(100% - 60px);
+}
+
+/* 输入框区域 */
+#input-container {
+    display: flex;
+    padding: 10px;
+    background: #f1f1f1;
+}
+
+#input-text {
+    flex-grow: 1;
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 5px;
+    resize: none;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* 发送按钮 */
+button {
+    margin-left: 10px;
+    padding: 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+/* 用户消息 */
+.user-message {
+    background-color: #007bff;
+    color: white;
+    padding: 8px;
+    border-radius: 5px;
+    margin: 5px 0;
+    align-self: flex-end;
+    max-width: 80%;
+    word-wrap: break-word;
+    display: block;
+    text-align: right;
+    margin-left: auto;
+}
+
+/* AI 回复 */
+.ai-message {
+    background-color: #f1f1f1;
+    color: black;
+    padding: 8px;
+    border-radius: 5px;
+    margin: 5px 0;
+    align-self: flex-start;
+    max-width: 80%;
+    word-wrap: break-word;
+    display: block;
+}
+
+/* 搜索框 */
+#search-container {
+    display: block !important;  
+    width: 100% !important;
+    height: auto !important;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd; 
+}
+
+#search-history {
+    flex-grow: 1;
+    min-width: 250px; 
+    font-size: 14px;
+    padding: 5px;
+}
+
+/* 清除历史按钮 */
+.clear-button {
+    background: #dc3545;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.clear-button:hover {
+    background: #c82333;
+}
