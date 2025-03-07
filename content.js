@@ -757,6 +757,39 @@ function createChatContainer() {
                     messages: messageHistory
                 })
             });
+
+            if (!response.ok) {
+                // 先尝试解析 body
+                let errorBody = await response.json().catch(() => null);
+    
+                if (response.status === 401 || (errorBody?.error?.message || "").toLowerCase().includes("incorrect api key")) {
+                    // 说明Key不对/失效
+                    // 清除本地Key
+                    await removeUserOpenAIKey();
+                    
+                    // 提示用户重新输入
+                    const newKey = await promptUserForAPIKey();
+                    if (!newKey) {
+                        responseDiv.textContent = "Invalid API key. Please try again.";
+                        removeStopButton(responseDiv);
+                        return;
+                    }
+                    
+                    // 用新的 Key 重试一次
+                    response = await fetch("https://api.openai.com/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${newKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "gpt-4",
+                            messages: messageHistory
+                        })
+                    });
+                }
+            }
+
             const result = await response.json();
             if (result.error) {
                 responseDiv.innerText = `Error: ${result.error.message}`;
@@ -771,7 +804,8 @@ function createChatContainer() {
 
         } catch (err) {
             console.error("API request error:", err);
-            responseDiv.textContent = "Request failed, please check your network connection.";
+            responseDiv.textContent = "Request failed, please check your network connection or API key.";
+            removeStopButton(responseDiv);
         }
     };
 
@@ -857,7 +891,7 @@ function setupDragAndDrop(container, overlay) {
         e.stopPropagation();
         overlay.style.display = "none";
 
-        // ★ 标记：用户已在容器内drop
+        // 标记：用户已在容器内drop
         didDropInContainer = true;
 
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -1121,8 +1155,6 @@ function loadHistoryToUI() {
 
 function promptUserForAPIKey() {
     return new Promise((resolve) => {
-        // 这里简单用 prompt()
-        // 也可用更漂亮的自定义UI
         const userKey = window.prompt("Please enter your OpenAI API Key:");
         if (userKey) {
             // 保存到chrome.storage.local
@@ -1144,6 +1176,15 @@ async function getUserOpenAIKey() {
             } else {
                 resolve(null);
             }
+        });
+    });
+}
+
+function removeUserOpenAIKey() {
+    return new Promise((resolve) => {
+        chrome.storage.local.remove(["userOpenAIKey"], () => {
+            console.log("User's OpenAI Key removed from storage.");
+            resolve();
         });
     });
 }

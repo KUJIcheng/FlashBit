@@ -61,7 +61,7 @@ A Chrome extension providing an AI-powered assistant in a floating, draggable wi
    - The extension previews the image in the chat window.  
    - (For OCR or image content analysis, you must add a 3rd-party API or GPT-4 Vision, if available.)
 
-5. **Text Selection Icon** (Optional):
+5. **Text Selection Icon**:
    - If enabled, when you select text on a page, a small “AI” icon may appear.  
    - Clicking it automatically opens the chat with that text pre-filled.
 
@@ -70,7 +70,7 @@ A Chrome extension providing an AI-powered assistant in a floating, draggable wi
 
 ## Project Structure
    ```bash
-   flashbit-chrome-extension
+   FlashBit
    ├── manifest.json           # Chrome extension config
    ├── background.js           # (Optional) manages background tasks
    ├── content.js              # Main logic: floating button, chat UI, drag & drop
