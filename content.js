@@ -174,12 +174,10 @@ document.addEventListener("copy", async () => {
 
 // =======================  文本选择后小图标  =======================
 function setupTextSelectionListener() {
-    // 鼠标抬起时，检测是否选中了文本
     document.addEventListener('mouseup', function(e) {
-        if (e.target.id === 'ai-selection-icon') {
-            return;
-        }
-        setTimeout(function() {
+        if (e.target.closest('#ai-selection-toolbar')) return;
+
+        setTimeout(function () {
             const selectedText = window.getSelection().toString().trim();
             if (selectedText) {
                 showSelectionIcon();
@@ -189,93 +187,121 @@ function setupTextSelectionListener() {
         }, 10);
     });
 
-    // 如果点击到别处，隐藏小图标
     document.addEventListener('mousedown', function(e) {
-        if (selectionIcon && e.target.id !== 'ai-selection-icon') {
+        if (selectionIcon && !e.target.closest('#ai-selection-toolbar')) {
             hideSelectionIcon();
         }
     });
 }
 
+
+
 function showSelectionIcon() {
-    hideSelectionIcon(); // 若已存在先移除
+    hideSelectionIcon(); 
 
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-    
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    
     if (rect.width === 0 || rect.height === 0) return;
 
     lastSelectedText = selection.toString().trim();
     if (!lastSelectedText) return;
-    
-    // 在选中文本右上方创建一个AI图标
-    const icon = document.createElement('div');
-    icon.id = 'ai-selection-icon';
-    icon.style.cssText = `
+
+    const baseLeft = rect.left + rect.width / 2;
+
+    // === Create toolbar container ===
+    const toolbar = document.createElement('div');
+    toolbar.id = 'ai-selection-toolbar';
+    toolbar.style.cssText = `
         position: fixed;
-        left: ${rect.right + 10}px;
-        top: ${rect.top - 10}px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #20c997;
-        color: white;
+        top: ${rect.top - 50}px;
+        left: ${baseLeft}px;
+        transform: translateX(-50%);
+        background-color: #ffffffdd;
+        border-radius: 12px;
+        padding: 6px 10px;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
+        gap: 8px;
         z-index: 999999;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        font-size: 16px;
-        font-weight: bold;
-        transition: transform 0.2s ease, background-color 0.2s ease;
-        user-select: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        align-items: center;
+        backdrop-filter: blur(6px);
+        border: 1px solid #cdece6;
     `;
-    icon.innerHTML = 'AI';
-    icon.title = 'Use AI to analyze selected text';
-    
-    // 点击 -> 打开聊天窗口，自动填入选中文本
-    icon.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("AI selection icon clicked!");
-        
-        const container = document.getElementById("ai-chat-container") || createChatContainer();
-        isChatOpen = true;
-        container.classList.add("open");
-        
-        const helper = document.getElementById("ai-helper");
-        if (helper) helper.style.bottom = "5px";
-        
-        const input = document.getElementById("ai-chat-input");
-        if (input) {
-            input.value = lastSelectedText;
-            input.style.height = "auto";
-            input.style.height = Math.min(input.scrollHeight, 100) + "px";
-            setTimeout(() => input.focus(), 100);
+
+    const buttons = [
+        {
+            id: 'ai-selection-icon-drop',
+            label: 'Drop',
+            title: 'Insert selected text into chat',
+            textToInsert: lastSelectedText,
+            autoSend: false
+        },
+        {
+            id: 'ai-selection-icon-translate',
+            label: 'Translate',
+            title: 'Translate selected text to English',
+            textToInsert: `Help me translate the following text to English: "${lastSelectedText}"`,
+            autoSend: false
+        },
+        {
+            id: 'ai-selection-icon-analyze',
+            label: 'Explain',
+            title: 'Analyze or explain this text',
+            textToInsert: `Can you help explain or analyze the following text: "${lastSelectedText}"`,
+            autoSend: true // 🔥 Send automatically
         }
-        
-        loadHistoryToUI();
-        hideSelectionIcon();
-    };
-    
-    // 鼠标悬停变色 & 放大
-    icon.onmouseenter = function() {
-        this.style.transform = 'scale(1.1)';
-        this.style.backgroundColor = '#17a2b8';
-    };
-    icon.onmouseleave = function() {
-        this.style.transform = 'scale(1)';
-        this.style.backgroundColor = '#20c997';
-    };
-    
-    document.body.appendChild(icon);
-    selectionIcon = icon;
-    console.log("Selection icon created:", icon);
+    ];
+
+    selectionIcon = toolbar;
+
+    buttons.forEach((btn) => {
+        const button = document.createElement('div');
+        button.id = btn.id;
+        button.textContent = btn.label;
+        button.title = btn.title;
+
+        button.style.cssText = `
+            padding: 6px 12px;
+            background-color: #20c997;
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            white-space: nowrap;
+        `;
+
+        button.onclick = () => {
+            openChatWithText(btn.textToInsert);
+            hideSelectionIcon();
+
+            if (btn.autoSend) {
+                setTimeout(() => {
+                    const sendBtn = document.getElementById("ai-chat-send");
+                    if (sendBtn) sendBtn.click();
+                }, 200);
+            }
+        };
+
+        button.onmouseenter = () => {
+            button.style.transform = 'scale(1.05)';
+            button.style.backgroundColor = '#17a2b8';
+        };
+        button.onmouseleave = () => {
+            button.style.transform = 'scale(1)';
+            button.style.backgroundColor = '#20c997';
+        };
+
+        toolbar.appendChild(button);
+    });
+
+    document.body.appendChild(toolbar);
 }
+
 
 function hideSelectionIcon() {
     if (selectionIcon && selectionIcon.parentNode) {
@@ -283,6 +309,27 @@ function hideSelectionIcon() {
     }
     selectionIcon = null;
 }
+
+
+function openChatWithText(text) {
+    const container = document.getElementById("ai-chat-container") || createChatContainer();
+    isChatOpen = true;
+    container.classList.add("open");
+
+    const helper = document.getElementById("ai-helper");
+    if (helper) helper.style.bottom = "5px";
+
+    const input = document.getElementById("ai-chat-input");
+    if (input) {
+        input.value = text;
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 100) + "px";
+        setTimeout(() => input.focus(), 100);
+    }
+
+    loadHistoryToUI();
+}
+
 
 // ======================= 注入聊天窗口样式 =======================
 function injectChatStyles() {
