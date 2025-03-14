@@ -174,14 +174,10 @@ document.addEventListener("copy", async () => {
 
 // =======================  文本选择后小图标  =======================
 function setupTextSelectionListener() {
-    // 鼠标抬起时，检测是否选中了文本
     document.addEventListener('mouseup', function(e) {
-        // Avoid triggering if user clicked on any of the selection icons
-        if (['ai-selection-icon-drop', 'ai-selection-icon-translate'].includes(e.target.id)) {
-            return;
-        }
+        if (e.target.closest('#ai-selection-toolbar')) return;
 
-        setTimeout(function() {
+        setTimeout(function () {
             const selectedText = window.getSelection().toString().trim();
             if (selectedText) {
                 showSelectionIcon();
@@ -191,150 +187,149 @@ function setupTextSelectionListener() {
         }, 10);
     });
 
-    // 如果点击到别处，隐藏所有小图标
     document.addEventListener('mousedown', function(e) {
-        if (
-            selectionIcon &&
-            !['ai-selection-icon-drop', 'ai-selection-icon-translate'].includes(e.target.id)
-        ) {
+        if (selectionIcon && !e.target.closest('#ai-selection-toolbar')) {
             hideSelectionIcon();
         }
     });
 }
 
 
+
 function showSelectionIcon() {
-    hideSelectionIcon(); // 若已存在先移除
+    hideSelectionIcon(); 
 
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-    
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    
     if (rect.width === 0 || rect.height === 0) return;
 
     lastSelectedText = selection.toString().trim();
     if (!lastSelectedText) return;
-    
-    // 在选中文本右上方创建一个DROP图标
-    const dropIcon = document.createElement('div');
-    dropIcon.id = 'ai-selection-icon-drop';
-    dropIcon.style.cssText = `
+
+    const baseLeft = rect.left + rect.width / 2;
+
+    // === Create toolbar container ===
+    const toolbar = document.createElement('div');
+    toolbar.id = 'ai-selection-toolbar';
+    toolbar.style.cssText = `
         position: fixed;
-        left: ${rect.right + 10}px;
-        top: ${rect.top - 10}px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #20c997;
-        color: white;
+        top: ${rect.top - 50}px;
+        left: ${baseLeft}px;
+        transform: translateX(-50%);
+        background-color: #ffffffdd;
+        border-radius: 12px;
+        padding: 6px 10px;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
+        gap: 8px;
         z-index: 999999;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        font-size: 14px;
-        font-weight: bold;
-        transition: transform 0.2s ease, background-color 0.2s ease;
-        user-select: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        align-items: center;
+        backdrop-filter: blur(6px);
+        border: 1px solid #cdece6;
     `;
-    dropIcon.innerHTML = 'Drop';
-    dropIcon.title = 'Insert selected text into chat';
-    dropIcon.onclick = () => {
-        console.log("[DropIcon] Clicked");
-        openChatWithText(lastSelectedText);
-        hideSelectionIcon();
-    };
-    
-    // 点击 -> 打开聊天窗口，自动填入选中文本
-    dropIcon.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("Drop button clicked!");
 
-        const container = document.getElementById("ai-chat-container") || createChatContainer();
-        isChatOpen = true;
-        container.classList.add("open");
-
-        const helper = document.getElementById("ai-helper");
-        if (helper) helper.style.bottom = "5px";
-
-        const input = document.getElementById("ai-chat-input");
-        if (input) {
-            input.value = lastSelectedText;
-            input.style.height = "auto";
-            input.style.height = Math.min(input.scrollHeight, 100) + "px";
-            setTimeout(() => input.focus(), 100);
+    const buttons = [
+        {
+            id: 'ai-selection-icon-drop',
+            label: 'Drop',
+            title: 'Insert selected text into chat',
+            textToInsert: lastSelectedText,
+            autoSend: false
+        },
+        {
+            id: 'ai-selection-icon-translate',
+            label: 'Translate',
+            title: 'Translate selected text to English',
+            textToInsert: `Help me translate the following text to English: "${lastSelectedText}"`,
+            autoSend: false
+        },
+        {
+            id: 'ai-selection-icon-analyze',
+            label: 'Explain',
+            title: 'Analyze or explain this text',
+            textToInsert: `Can you help explain or analyze the following text: "${lastSelectedText}"`,
+            autoSend: true // 🔥 Send automatically
         }
+    ];
 
-        loadHistoryToUI();
-        hideSelectionIcon();
-    };
-    
-    // 在选中文本右上方创建一个translate图标
-    const translateIcon = document.createElement('div');
-    translateIcon.id = 'ai-selection-icon-translate';
-    translateIcon.style.cssText = dropIcon.style.cssText;
-    translateIcon.style.left = `${rect.right + 55}px`; // Slight offset to the right
-    translateIcon.innerHTML = 'Trans';
-    translateIcon.title = 'Translate selected text to English';
-    
-    translateIcon.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("Translate button clicked!");
+    selectionIcon = toolbar;
 
-        const container = document.getElementById("ai-chat-container") || createChatContainer();
-        isChatOpen = true;
-        container.classList.add("open");
+    buttons.forEach((btn) => {
+        const button = document.createElement('div');
+        button.id = btn.id;
+        button.textContent = btn.label;
+        button.title = btn.title;
 
-        const helper = document.getElementById("ai-helper");
-        if (helper) helper.style.bottom = "5px";
+        button.style.cssText = `
+            padding: 6px 12px;
+            background-color: #20c997;
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            white-space: nowrap;
+        `;
 
-        const input = document.getElementById("ai-chat-input");
-        if (input) {
-            const translatedText = `Help me translate the following text to English: "${lastSelectedText}"`;
-            input.value = translatedText;
-            input.style.height = "auto";
-            input.style.height = Math.min(input.scrollHeight, 100) + "px";
-            setTimeout(() => input.focus(), 100);
-        }
+        button.onclick = () => {
+            openChatWithText(btn.textToInsert);
+            hideSelectionIcon();
 
-        loadHistoryToUI();
-        hideSelectionIcon();
-    };
-
-
-    [dropIcon, translateIcon].forEach(icon => {
-        icon.onmouseenter = () => {
-            icon.style.transform = 'scale(1.1)';
-            icon.style.backgroundColor = '#17a2b8';
+            if (btn.autoSend) {
+                setTimeout(() => {
+                    const sendBtn = document.getElementById("ai-chat-send");
+                    if (sendBtn) sendBtn.click();
+                }, 200);
+            }
         };
-        icon.onmouseleave = () => {
-            icon.style.transform = 'scale(1)';
-            icon.style.backgroundColor = '#20c997';
+
+        button.onmouseenter = () => {
+            button.style.transform = 'scale(1.05)';
+            button.style.backgroundColor = '#17a2b8';
         };
+        button.onmouseleave = () => {
+            button.style.transform = 'scale(1)';
+            button.style.backgroundColor = '#20c997';
+        };
+
+        toolbar.appendChild(button);
     });
 
-    document.body.appendChild(dropIcon);
-    document.body.appendChild(translateIcon);
-    selectionIcon = [dropIcon, translateIcon];
-    
+    document.body.appendChild(toolbar);
 }
 
 
 function hideSelectionIcon() {
-    if (Array.isArray(selectionIcon)) {
-        selectionIcon.forEach(icon => {
-            if (icon && icon.parentNode) icon.parentNode.removeChild(icon);
-        });
-    } else if (selectionIcon && selectionIcon.parentNode) {
+    if (selectionIcon && selectionIcon.parentNode) {
         selectionIcon.parentNode.removeChild(selectionIcon);
     }
     selectionIcon = null;
 }
+
+
+function openChatWithText(text) {
+    const container = document.getElementById("ai-chat-container") || createChatContainer();
+    isChatOpen = true;
+    container.classList.add("open");
+
+    const helper = document.getElementById("ai-helper");
+    if (helper) helper.style.bottom = "5px";
+
+    const input = document.getElementById("ai-chat-input");
+    if (input) {
+        input.value = text;
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 100) + "px";
+        setTimeout(() => input.focus(), 100);
+    }
+
+    loadHistoryToUI();
+}
+
 
 // ======================= 注入聊天窗口样式 =======================
 function injectChatStyles() {
