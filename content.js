@@ -754,107 +754,97 @@ function createChatContainer() {
     const sendButton = document.createElement("button");
     sendButton.id = "ai-chat-send";
     sendButton.textContent = "Send";
+
     sendButton.onclick = async () => {
-        let userKey = await getUserOpenAIKey();
-        if (!userKey) {
-            userKey = await promptUserForAPIKey();
-            if (!userKey) {
-                return;
-            }
-        }
+    let userKey = await getUserOpenAIKey();
+    if (!userKey) {
+        userKey = await promptUserForAPIKey();
+        if (!userKey) return;
+    }
 
-        // 如果有等待发送的图片
-        if (window.pendingImage && window.pendingImage.dataUrl) {
-            appendMessage("user", window.pendingImage.dataUrl);
-            messageHistory.push({
-                role: "user",
-                content: window.pendingImage.dataUrl,
-                type: "image",
-                filename: window.pendingImage.filename
-            });
-            saveChatHistory();
-            hideImagePreview();
-            window.pendingImage = null;
-        }
-
-        const userText = chatInput.value.trim();
-        if (!userText) return;
-        // 发文字消息
-        appendMessage("user", userText);
-        messageHistory.push({ role: "user", content: userText });
-        saveChatHistory();
-
-        // 清空输入框
-        chatInput.value = "";
-        chatInput.style.height = "auto";
-
-        // 显示 AI “Thinking...” 占位
-        const responseDiv = appendMessage("assistant", "Thinking...");
-
-        try {
-            // 发请求到 GPT
-            const response = await fetch("https://api.openai.com/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${userKey}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4",
-                    messages: messageHistory
-                })
-            });
-
-            if (!response.ok) {
-                // 先尝试解析 body
-                let errorBody = await response.json().catch(() => null);
+    const chatInput = document.getElementById("ai-chat-input");
+    const userText = chatInput.value.trim();
+    const messages = [];
     
-                if (response.status === 401 || (errorBody?.error?.message || "").toLowerCase().includes("incorrect api key")) {
-                    // 说明Key不对/失效
-                    // 清除本地Key
-                    await removeUserOpenAIKey();
-                    
-                    // 提示用户重新输入
-                    const newKey = await promptUserForAPIKey();
-                    if (!newKey) {
-                        responseDiv.textContent = "Invalid API key. Please try again.";
-                        removeStopButton(responseDiv);
-                        return;
-                    }
-                    
-                    // 用新的 Key 重试一次
-                    response = await fetch("https://api.openai.com/v1/chat/completions", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${newKey}`
-                        },
-                        body: JSON.stringify({
-                            model: "gpt-4",
-                            messages: messageHistory
-                        })
-                    });
-                }
-            }
+    // If an image is pending
+    if (window.pendingImage && window.pendingImage.dataUrl) {
+        const contentArray = [];
+        
+        // Append user text to UI separately (so it's visible in chat history)
+        if (userText) {
+            appendMessage("user", userText); // ✅ Show text in chat
+            contentArray.push({ type: "text", text: userText });
 
-            const result = await response.json();
-            if (result.error) {
-                responseDiv.innerText = `Error: ${result.error.message}`;
-                return;
-            }
-            const aiText = result.choices[0].message.content;
-            messageHistory.push({ role: "assistant", content: aiText });
-            saveChatHistory();
-
-            responseDiv.textContent = "";
-            animateText(responseDiv, aiText);
-
-        } catch (err) {
-            console.error("API request error:", err);
-            responseDiv.textContent = "Request failed, please check your network connection or API key.";
-            removeStopButton(responseDiv);
+            // Store user text message in history
+            messageHistory.push({ role: "user", content: userText });
         }
-    };
+        
+        // Append image preview
+        appendMessage("user", window.pendingImage.dataUrl); // ✅ Show image in chat
+        contentArray.push({ type: "image_url", image_url: { url: window.pendingImage.dataUrl } });
+
+        // Push message with image to OpenAI API
+        messages.push({
+            role: "user",
+            content: contentArray
+        });
+
+        // Save in history (separate image entry)
+        messageHistory.push({
+            role: "user",
+            content: `[Image Uploaded]`,
+            type: "image"
+        });
+
+        hideImagePreview();
+        window.pendingImage = null;
+    } else {
+        if (!userText) return;
+        appendMessage("user", userText); // ✅ Show text in chat
+        messages.push({ role: "user", content: userText });
+
+        // Store user text message in history
+        messageHistory.push({ role: "user", content: userText });
+    }
+
+    saveChatHistory();
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+
+    const responseDiv = appendMessage("assistant", "Thinking...");
+
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: messages,
+                max_tokens: 2000
+            })
+        });
+
+        const result = await response.json();
+        if (result.error) {
+            responseDiv.textContent = `Error: ${result.error.message}`;
+            return;
+        }
+
+        const aiText = result.choices[0].message.content;
+        messageHistory.push({ role: "assistant", content: aiText });
+        saveChatHistory();
+        responseDiv.textContent = "";
+        animateText(responseDiv, aiText);
+
+    } catch (err) {
+        console.error("API error:", err);
+        responseDiv.textContent = "Request failed. Check network or API key.";
+        removeStopButton(responseDiv);
+    }
+};
 
     // 组装输入区域
     inputContainer.appendChild(chatInput);
