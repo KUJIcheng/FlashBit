@@ -4,7 +4,8 @@
 
 A Chrome extension providing an AI-powered assistant in a floating, draggable window. Interact with GPT-4 (or other models) via a sleek chat interface, with optional image drag & drop, text selection features, and user-provided OpenAI API key.
 
-[![FlashBit Video](https://img.youtube.com/vi/Xg5w9ouJkn8/hqdefault.jpg)](https://www.youtube.com/watch?v=Xg5w9ouJkn8)
+You can watch the full walkthrough here:  
+[Demo Video on YouTube](https://www.youtube.com/watch?v=Xg5w9ouJkn8)
 
 ## Features
 
